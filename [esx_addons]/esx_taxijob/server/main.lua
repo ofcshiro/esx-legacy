@@ -30,19 +30,34 @@ AddEventHandler('esx_taxijob:success', function()
                     local playerMoney = ESX.Math.Round(total / 100 * 30)
                     local societyMoney = ESX.Math.Round(total / 100 * 70)
 
-                    xPlayer.addMoney(playerMoney)
+                    xPlayer.addMoney(playerMoney, "Taxi Fair")
                     account.addMoney(societyMoney)
 
                     xPlayer.showNotification(_U('comp_earned', societyMoney, playerMoney))
                 else
-                    xPlayer.addMoney(total)
+                    xPlayer.addMoney(total, "Taxi Fair")
                     xPlayer.showNotification(_U('have_earned', total))
                 end
             end)
         end
     else
-        print(('[esx_taxijob] [^3WARNING^7] %s attempted to trigger success (cheating)'):format(xPlayer.identifier))
+        print(('[^3WARNING^7] Player ^5%s^7 attempted to ^5esx_taxijob:success^7 (cheating)'):format(source))
     end
+end)
+
+ESX.RegisterServerCallback("esx_taxijob:SpawnVehicle", function(source, cb, model , props)
+    local xPlayer = ESX.GetPlayerFromId(source)
+
+    if xPlayer.job.name ~= "taxi" then 
+        print(('[^3WARNING^7] Player ^5%s^7 attempted to Exploit Vehicle Spawing!!'):format(source))
+        return
+    end
+    local SpawnPoint = vector3(Config.Zones.VehicleSpawnPoint.Pos.x, Config.Zones.VehicleSpawnPoint.Pos.y, Config.Zones.VehicleSpawnPoint.Pos.z)
+    ESX.OneSync.SpawnVehicle(joaat(model), SpawnPoint, Config.Zones.VehicleSpawnPoint.Heading, true, props, function(vehicle)
+        local vehicle = NetworkGetEntityFromNetworkId(vehicle)
+        TaskWarpPedIntoVehicle(GetPlayerPed(source), vehicle, -1)
+    end)
+    cb()
 end)
 
 RegisterNetEvent('esx_taxijob:getStockItem')
@@ -68,7 +83,7 @@ AddEventHandler('esx_taxijob:getStockItem', function(itemName, count)
             end
         end)
     else
-        print(('[esx_taxijob] [^3WARNING^7] %s attempted to trigger getStockItem'):format(xPlayer.identifier))
+        print(('[^3WARNING^7] Player ^5%s^7 attempted ^5esx_taxijob:getStockItem^7 (cheating)'):format(source))
     end
 end)
 
@@ -95,7 +110,7 @@ AddEventHandler('esx_taxijob:putStockItems', function(itemName, count)
             end
         end)
     else
-        print(('[esx_taxijob] [^3WARNING^7] %s attempted to trigger putStockItems'):format(xPlayer.identifier))
+        print(('[^3WARNING^7] Player ^5%s^7 attempted ^5esx_taxijob:putStockItems^7 (cheating)'):format(source))
     end
 end)
 

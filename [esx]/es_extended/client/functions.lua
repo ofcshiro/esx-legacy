@@ -84,20 +84,19 @@ function ESX.Progressbar(message, length, Options)
 end
 
 function ESX.ShowNotification(message, type, length)
-    if Config.NativeNotify then
-        BeginTextCommandThefeedPost('STRING')
-        AddTextComponentSubstringPlayerName(message)
-        EndTextCommandThefeedPostTicker(0, 1)
-    else
+    if GetResourceState("esx_notify") ~= "missing" then
         exports["esx_notify"]:Notify(type, length, message)
+        else
+            print("[^1ERROR^7] ^5ESX Notify^7 is Missing!")
+        end
     end
-end
-
+    
+    
 function ESX.TextUI(message, type)
     if GetResourceState("esx_textui") ~= "missing" then
         exports["esx_textui"]:TextUI(message, type)
     else 
-        print("[ERROR] Missing ESX TextUI!")
+        print("[^1ERROR^7] ^5ESX TextUI^7 is Missing!")
         return
     end
 end
@@ -106,7 +105,7 @@ function ESX.HideUI()
     if GetResourceState("esx_textui") ~= "missing" then
         exports["esx_textui"]:HideUI()
     else 
-        print("[ERROR] Missing ESX TextUI!")
+        print("[^1ERROR^7] ^5ESX TextUI^7 is Missing!")
         return
     end
 end
@@ -158,7 +157,6 @@ ESX.HashString = function(str)
 end
 
 if GetResourceState("esx_context") ~= "missing" then
-
     function ESX.OpenContext(...)
         exports["esx_context"]:Open(...)
     end
@@ -170,17 +168,25 @@ if GetResourceState("esx_context") ~= "missing" then
     function ESX.CloseContext(...)
         exports["esx_context"]:Close(...)
     end
+
+    function ESX.RefreshContext(...)
+       exports["esx_context"]:Refresh(...) 
+    end
 else 
     function ESX.OpenContext()
-        print("[ERROR] ESX Context Not Found")
+        print("[^1ERROR^7] Tried to ^5open^7 context menu, but ^5esx_context^7 is missing!")
     end
 
     function ESX.PreviewContext()
-        print("[ERROR] ESX Context Not Found")
+        print("[^1ERROR^7] Tried to ^5preview^7 context menu, but ^5esx_context^7 is missing!")
     end
 
     function ESX.CloseContext()
-        print("[ERROR] ESX Context Not Found")
+        print("[^1ERROR^7] Tried to ^5close^7 context menu, but ^5esx_context^7 is missing!")
+    end
+
+    function ESX.RefreshContext()
+        print("[^1ERROR^7] Tried to ^5Refresh^7 context menu, but ^5esx_context^7 is missing!")
     end
 end
 
@@ -195,9 +201,10 @@ ESX.RegisterInput = function(command_name, label, input_group, key, on_press, on
 end
 
 function ESX.TriggerServerCallback(name, cb, ...)
+    local Invoke = GetInvokingResource() or "unknown"
     Core.ServerCallbacks[Core.CurrentRequestId] = cb
 
-    TriggerServerEvent('esx:triggerServerCallback', name, Core.CurrentRequestId, ...)
+    TriggerServerEvent('esx:triggerServerCallback', name, Core.CurrentRequestId,Invoke, ...)
     Core.CurrentRequestId = Core.CurrentRequestId < 65535 and Core.CurrentRequestId + 1 or 0
 end
 
@@ -484,57 +491,33 @@ function ESX.Game.DeleteObject(object)
 end
 
 function ESX.Game.SpawnVehicle(vehicle, coords, heading, cb, networked)
-    local model = (type(vehicle) == 'number' and vehicle or joaat(vehicle))
+    local model = type(vehicle) == 'number' and vehicle or joaat(vehicle)
     local vector = type(coords) == "vector3" and coords or vec(coords.x, coords.y, coords.z)
     networked = networked == nil and true or networked
-    if networked then 
-        local isAutomobile = IsThisModelACar(model)
-        if isAutomobile ~= false then isAutomobile = true end
-        ESX.TriggerServerCallback('esx:Onesync:SpawnVehicle',function(NetID)
-            print("Spawned Vehicle: " .. NetID)
-            if NetID then
-                local vehicle = NetworkGetEntityFromNetworkId(NetID)
-                while not DoesEntityExist(vehicle) and not NetworkHasControlOfEntity(vehicle) do
-                    vehicle = NetworkGetEntityFromNetworkId(NetID)
-                    NetworkRequestControlOfEntity(vehicle)
-                    Wait(0)
-                end
-                SetEntityAsMissionEntity(vehicle, true, true)
-                SetVehicleHasBeenOwnedByPlayer(vehicle, true)
-                SetVehicleNeedsToBeHotwired(vehicle, false)
-                SetModelAsNoLongerNeeded(model)
-                SetVehRadioStation(vehicle, 'OFF')
-                if cb then
-                    cb(vehicle)
-                end
-            end
-        end, model, vector, heading, isAutomobile)
-    else 
-        CreateThread(function()
-            ESX.Streaming.RequestModel(model)
+    CreateThread(function()
+        ESX.Streaming.RequestModel(model)
 
-            local vehicle = CreateVehicle(model, vector.xyz, heading, networked, false)
+        local vehicle = CreateVehicle(model, vector.xyz, heading, networked, true)
 
-            if networked then
-                local id = NetworkGetNetworkIdFromEntity(vehicle)
-                SetNetworkIdCanMigrate(id, true)
-                SetEntityAsMissionEntity(vehicle, true, false)
-            end
-            SetVehicleHasBeenOwnedByPlayer(vehicle, true)
-            SetVehicleNeedsToBeHotwired(vehicle, false)
-            SetModelAsNoLongerNeeded(model)
-            SetVehRadioStation(vehicle, 'OFF')
+        if networked then
+            local id = NetworkGetNetworkIdFromEntity(vehicle)
+            SetNetworkIdCanMigrate(id, true)
+            SetEntityAsMissionEntity(vehicle, true, true)
+        end
+        SetVehicleHasBeenOwnedByPlayer(vehicle, true)
+        SetVehicleNeedsToBeHotwired(vehicle, false)
+        SetModelAsNoLongerNeeded(model)
+        SetVehRadioStation(vehicle, 'OFF')
 
-            RequestCollisionAtCoord(vector.xyz)
-            while not HasCollisionLoadedAroundEntity(vehicle) do
-                Wait(0)
-            end
+        RequestCollisionAtCoord(vector.xyz)
+        while not HasCollisionLoadedAroundEntity(vehicle) do
+            Wait(0)
+        end
 
-            if cb then
-                cb(vehicle)
-            end
-        end)
-    end
+        if cb then
+            cb(vehicle)
+        end
+    end)
 end
 
 function ESX.Game.SpawnLocalVehicle(vehicle, coords, heading, cb)
@@ -693,6 +676,12 @@ function ESX.Game.GetVehicleProperties(vehicle)
             customPrimaryColor = {r, g, b}
         end
 
+        local customXenonColorR, customXenonColorG, customXenonColorB = GetVehicleXenonLightsCustomColor(vehicle)
+        local customXenonColor = nil
+        if customXenonColorR and customXenonColorG and customXenonColorB then 
+            customXenonColor = {customXenonColorR, customXenonColorG, customXenonColorB}
+        end
+        
         local hasCustomSecondaryColor = GetIsVehicleSecondaryColourCustom(vehicle)
         local customSecondaryColor = nil
         if hasCustomSecondaryColor then
@@ -772,6 +761,7 @@ function ESX.Game.GetVehicleProperties(vehicle)
             wheels = GetVehicleWheelType(vehicle),
             windowTint = GetVehicleWindowTint(vehicle),
             xenonColor = GetVehicleXenonLightsColor(vehicle),
+            customXenonColor = customXenonColor,
 
             neonEnabled = {IsVehicleNeonLightEnabled(vehicle, 0), IsVehicleNeonLightEnabled(vehicle, 1),
                            IsVehicleNeonLightEnabled(vehicle, 2), IsVehicleNeonLightEnabled(vehicle, 3)},
@@ -912,6 +902,10 @@ function ESX.Game.SetVehicleProperties(vehicle, props)
         end
         if props.xenonColor then
             SetVehicleXenonLightsColor(vehicle, props.xenonColor)
+        end
+        if props.customXenonColor then
+            SetVehicleXenonLightsCustomColor(vehicle, props.customXenonColor[1], props.customXenonColor[2],
+                props.customXenonColor[3])
         end
         if props.modSmokeEnabled then
             ToggleVehicleMod(vehicle, 20, true)

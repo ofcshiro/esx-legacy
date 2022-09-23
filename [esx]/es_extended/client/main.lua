@@ -1,5 +1,5 @@
 local pickups = {}
-
+local PlayerBank, PlayerMoney = 0,0
 CreateThread(function()
 	while not Config.Multichar do
 		Wait(0)
@@ -106,7 +106,7 @@ AddEventHandler('esx:playerLoaded', function(xPlayer, isNew, skin)
 				if #DisabledComps > 0 then
 					Sleep = false
 					for i=1, #(DisabledComps) do
-								HideHudComponentThisFrame(i)
+						HideHudComponentThisFrame(DisabledComps[i])
 					end
 				end
 				
@@ -193,6 +193,18 @@ AddEventHandler('esx:restoreLoadout', function()
 	end
 end)
 
+AddStateBagChangeHandler('VehicleProperties', nil, function(bagName, key, value)
+	if value then
+			Wait(0)
+			local NetId = tonumber(bagName:gsub('entity:', ''), 10)
+			local Vehicle = NetworkGetEntityFromNetworkId(NetId)
+
+			if NetworkGetEntityOwner(Vehicle) == PlayerId() then
+					ESX.Game.SetVehicleProperties(Vehicle, value)
+			end
+	end
+end)
+
 RegisterNetEvent('esx:setAccountMoney')
 AddEventHandler('esx:setAccountMoney', function(account)
 	for i=1, #(ESX.PlayerData.accounts) do
@@ -252,17 +264,17 @@ if not Config.OxInventory then
 
 	RegisterNetEvent('esx:addWeapon')
 	AddEventHandler('esx:addWeapon', function(weapon, ammo)
-		print("[WARNING] event 'esx:addWeapon' is deprecated. Please use xPlayer.addWeapon Instead!")
+		print("[^1ERROR^7] event ^5'esx:addWeapon'^7 Has Been Removed. Please use ^5xPlayer.addWeapon^7 Instead!")
 	end)
 
 	RegisterNetEvent('esx:addWeaponComponent')
 	AddEventHandler('esx:addWeaponComponent', function(weapon, weaponComponent)
-		print("[WARNING] event 'esx:addWeaponComponent' is deprecated. Please use xPlayer.addWeaponComponent Instead!")
+		print("[^1ERROR^7] event ^5'esx:addWeaponComponent'^7 Has Been Removed. Please use ^5xPlayer.addWeaponComponent^7 Instead!")
 	end)
 
 	RegisterNetEvent('esx:setWeaponAmmo')
 	AddEventHandler('esx:setWeaponAmmo', function(weapon, weaponAmmo)
-		print("[WARNING] event 'esx:setWeaponAmmo' is deprecated. Please use xPlayer.addWeaponComponent Instead!")
+		print("[^1ERROR^7] event ^5'esx:setWeaponAmmo'^7 Has Been Removed. Please use ^5xPlayer.addWeaponComponent^7 Instead!")
 	end)
 
 	RegisterNetEvent('esx:setWeaponTint')
@@ -407,8 +419,9 @@ end
 if Config.EnableHud then
 	CreateThread(function()
 		local isPaused = false
-		local time = 500
+		
 		while true do
+			local time = 500
 			Wait(time)
 
 			if IsPauseMenuActive() and not isPaused then
@@ -728,3 +741,20 @@ AddEventHandler("esx:freezePlayer", function(input)
         SetPlayerInvincible(player, false)
     end
 end)
+
+local DoNotUse = {
+	'essentialmode',
+	'es_admin2',
+	'basic-gamemode',
+	'mapmanager',
+	'fivem-map-skater',
+	'fivem-map-hipster',
+	'qb-core',
+	'default_spawnpoint',
+}
+
+for i=1, #DoNotUse do
+	if GetResourceState(DoNotUse[i]) == 'started' or GetResourceState(DoNotUse[i]) == 'starting' then
+		print("[^1ERROR^7] YOU ARE USING A RESOURCE THAT WILL BREAK ^1ESX^7, PLEASE REMOVE ^5"..DoNotUse[i].."^7")
+	end
+end

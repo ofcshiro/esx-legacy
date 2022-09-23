@@ -3,7 +3,7 @@ ESX.RegisterServerCallback('esx_weaponshop:buyLicense', function(source, cb)
 	local xPlayer = ESX.GetPlayerFromId(source)
 
 	if xPlayer.getMoney() >= Config.LicensePrice then
-		xPlayer.removeMoney(Config.LicensePrice)
+		xPlayer.removeMoney(Config.LicensePrice, "Weapon License")
 
 		TriggerEvent('esx_license:addLicense', source, 'weapon', function()
 			cb(true)
@@ -19,7 +19,8 @@ ESX.RegisterServerCallback('esx_weaponshop:buyWeapon', function(source, cb, weap
 	local price = GetPrice(weaponName, zone)
 
 	if price == 0 then
-		print(('esx_weaponshop: %s attempted to buy a unknown weapon!'):format(xPlayer.identifier))
+
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to buy Invalid weapon - %s!'):format(source, weaponName))
 		cb(false)
 	else
 		if xPlayer.hasWeapon(weaponName) then
@@ -28,7 +29,7 @@ ESX.RegisterServerCallback('esx_weaponshop:buyWeapon', function(source, cb, weap
 		else
 			if zone == 'BlackWeashop' then
 				if xPlayer.getAccount('black_money').money >= price then
-					xPlayer.removeAccountMoney('black_money', price)
+					xPlayer.removeAccountMoney('black_money', price, "Black Weapons Deal")
 					xPlayer.addWeapon(weaponName, 42)
 	
 					cb(true)
@@ -38,7 +39,7 @@ ESX.RegisterServerCallback('esx_weaponshop:buyWeapon', function(source, cb, weap
 				end
 			else
 				if xPlayer.getMoney() >= price then
-					xPlayer.removeMoney(price)
+					xPlayer.removeMoney(price, "Weapons Deal")
 					xPlayer.addWeapon(weaponName, 42)
 	
 					cb(true)

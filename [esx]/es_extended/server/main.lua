@@ -72,7 +72,7 @@ function createESXPlayer(identifier, playerId, data)
   end
 
   if Core.IsPlayerAdmin(playerId) then
-    print(('^2[INFO] ^0 Player ^5%s ^0Has been granted admin permissions via ^5Ace Perms.^7'):format(playerId))
+    print(('[^2INFO^0] Player ^5%s^0 Has been granted admin permissions via ^5Ace Perms^7.'):format(playerId))
     defaultGroup = "admin"
   else
     defaultGroup = "user"
@@ -131,15 +131,21 @@ function loadESXPlayer(identifier, playerId, isNew)
     if data.round == nil then
       data.round = true
     end
-    userData.accounts[#userData.accounts + 1] = {name = account, money = foundAccounts[account] or Config.StartingAccountMoney[account] or 0,
-                                                 label = data.label, round = data.round}
+    local index = #userData.accounts + 1
+    userData.accounts[index] = {
+      name = account, 
+      money = foundAccounts[account] or Config.StartingAccountMoney[account] or 0,
+      label = data.label, 
+      round = data.round,
+      index = index
+    }
   end
 
   -- Job
   if ESX.DoesJobExist(job, grade) then
     jobObject, gradeObject = ESX.Jobs[job], ESX.Jobs[job].grades[grade]
   else
-    print(('[^3WARNING^7] Ignoring invalid job for %s [job: %s, grade: %s]'):format(identifier, job, grade))
+    print(('[^3WARNING^7] Ignoring invalid job for ^5%s^7 [job: ^5%s^7, grade: ^5%s^7]'):format(identifier, job, grade))
     job, grade = 'unemployed', '0'
     jobObject, gradeObject = ESX.Jobs[job], ESX.Jobs[job].grades[grade]
   end
@@ -174,7 +180,7 @@ function loadESXPlayer(identifier, playerId, isNew)
         if item then
           foundItems[name] = count
         else
-          print(('[^3WARNING^7] Ignoring invalid item "%s" for "%s"'):format(name, identifier))
+          print(('[^3WARNING^7] Ignoring invalid item ^5"%s"^7 for ^5"%s^7"'):format(name, identifier))
         end
       end
     end
@@ -205,7 +211,7 @@ function loadESXPlayer(identifier, playerId, isNew)
   if result.group then
     if result.group == "superadmin" then
       userData.group = "admin"
-      print("[^3WARNING^7] Superadmin detected, setting group to admin")
+      print("[^3WARNING^7] ^5Superadmin^7 detected, setting group to ^5admin^7")
     else
       userData.group = result.group
     end
@@ -292,8 +298,18 @@ function loadESXPlayer(identifier, playerId, isNew)
   TriggerEvent('esx:playerLoaded', playerId, xPlayer, isNew)
 
   xPlayer.triggerEvent('esx:playerLoaded',
-    {accounts = xPlayer.getAccounts(), coords = xPlayer.getCoords(), identifier = xPlayer.getIdentifier(), inventory = xPlayer.getInventory(),
-     job = xPlayer.getJob(), loadout = xPlayer.getLoadout(), maxWeight = xPlayer.getMaxWeight(), money = xPlayer.getMoney(), dead = false}, isNew,
+    {
+      accounts = xPlayer.getAccounts(), 
+      coords = xPlayer.getCoords(), 
+      identifier = xPlayer.getIdentifier(), 
+      inventory = xPlayer.getInventory(),
+      job = xPlayer.getJob(), 
+      loadout = xPlayer.getLoadout(), 
+      maxWeight = xPlayer.getMaxWeight(), 
+      money = xPlayer.getMoney(),
+      sex = xPlayer.get("sex") or "m",
+      dead = false
+    }, isNew,
     userData.skin)
 
   if not Config.OxInventory then
@@ -303,7 +319,7 @@ function loadESXPlayer(identifier, playerId, isNew)
   end
 
   xPlayer.triggerEvent('esx:registerSuggestions', Core.RegisteredCommands)
-  print(('[^2INFO^0] Player ^5"%s" ^0has connected to the server. ID: ^5%s^7'):format(xPlayer.getName(), playerId))
+  print(('[^2INFO^0] Player ^5"%s"^0 has connected to the server. ID: ^5%s^7'):format(xPlayer.getName(), playerId))
 end
 
 AddEventHandler('chatMessage', function(playerId, author, message)
@@ -370,7 +386,7 @@ if not Config.OxInventory then
     local targetXPlayer = ESX.GetPlayerFromId(target)
     local distance = #(GetEntityCoords(GetPlayerPed(playerId)) - GetEntityCoords(GetPlayerPed(target)))
     if not sourceXPlayer or not targetXPlayer or distance > Config.DistanceGive then
-      print("[WARNING] Player Detected Cheating: " .. GetPlayerName(playerId))
+      print("[^3WARNING^7] Player Detected Cheating: ^5" .. GetPlayerName(playerId) .. "^7")
       return
     end
 
@@ -392,8 +408,8 @@ if not Config.OxInventory then
       end
     elseif type == 'item_account' then
       if itemCount > 0 and sourceXPlayer.getAccount(itemName).money >= itemCount then
-        sourceXPlayer.removeAccountMoney(itemName, itemCount)
-        targetXPlayer.addAccountMoney(itemName, itemCount)
+        sourceXPlayer.removeAccountMoney(itemName, itemCount, "Gave to " .. targetXPlayer.name)
+        targetXPlayer.addAccountMoney(itemName, itemCount, "Received from " .. sourceXPlayer.name)
 
         sourceXPlayer.showNotification(_U('gave_account_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName].label, targetXPlayer.name))
         targetXPlayer.showNotification(_U('received_account_money', ESX.Math.GroupDigits(itemCount), Config.Accounts[itemName].label,
@@ -489,7 +505,7 @@ if not Config.OxInventory then
         if (itemCount > account.money or account.money < 1) then
           xPlayer.showNotification(_U('imp_invalid_amount'))
         else
-          xPlayer.removeAccountMoney(itemName, itemCount)
+          xPlayer.removeAccountMoney(itemName, itemCount, "Threw away")
           local pickupLabel = ('%s [%s]'):format(account.label, _U('locale_currency', ESX.Math.GroupDigits(itemCount)))
           ESX.CreatePickup('item_account', itemName, itemCount, pickupLabel, playerId)
           xPlayer.showNotification(_U('threw_account', ESX.Math.GroupDigits(itemCount), string.lower(account.label)))
@@ -545,7 +561,7 @@ if not Config.OxInventory then
         end
       elseif pickup.type == 'item_account' then
         success = true
-        xPlayer.addAccountMoney(pickup.name, pickup.count)
+        xPlayer.addAccountMoney(pickup.name, pickup.count, "Picked up")
       elseif pickup.type == 'item_weapon' then
         if xPlayer.hasWeapon(pickup.name) then
           xPlayer.showNotification(_U('threw_weapon_already'))
@@ -577,6 +593,10 @@ end)
 
 ESX.RegisterServerCallback('esx:isUserAdmin', function(source, cb)
   cb(Core.IsPlayerAdmin(source))
+end)
+
+ESX.RegisterServerCallback('esx:getGameBuild', function(source, cb)
+  cb(tonumber(GetConvar("sv_enforceGameBuild", 1604)))
 end)
 
 ESX.RegisterServerCallback('esx:getOtherPlayerData', function(source, cb, target)

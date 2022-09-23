@@ -12,6 +12,11 @@ ESX.RegisterCommand('setjob', 'admin', function(xPlayer, args, showError)
 	else
 		showError(_U('command_setjob_invalid'))
 	end
+	ESX.DiscordLogFields("UserActions", "/setjob Triggered", "pink", {
+		{name = "Player", value = xPlayer.name, inline = true},
+		{name = "Job", value = args.job, inline = true},
+    {name = "Grade", value = args.grade, inline = true}
+	})
 end, true, {help = _U('command_setjob'), validate = true, arguments = {
 	{name = 'playerId', help = _U('commandgeneric_playerid'), type = 'player'},
 	{name = 'job', help = _U('command_setjob_job'), type = 'string'},
@@ -20,7 +25,12 @@ end, true, {help = _U('command_setjob'), validate = true, arguments = {
 
 ESX.RegisterCommand('car', 'admin', function(xPlayer, args, showError)
 	local GameBuild = tonumber(GetConvar("sv_enforceGameBuild", 1604))
-	if not args.car then args.car = GameBuild >= 2699 and "DRAUGUR" or "Prototipo" end
+	if not args.car then args.car = GameBuild >= 2699 and "draugur" or "prototipo" end
+	ESX.DiscordLogFields("UserActions", "/car Triggered", "pink", {
+		{name = "Player", value = xPlayer.name, inline = true},
+		{name = "ID", value = xPlayer.source, inline = true},
+    {name = "Vehicle", value = args.car, inline = true}
+	})
 	xPlayer.triggerEvent('esx:spawnVehicle', args.car)
 end, false, {help = _U('command_car'), validate = false, arguments = {
 	{name = 'car',validate = false, help = _U('command_car_car'), type = 'string'}
@@ -40,7 +50,7 @@ end, false, {help = _U('command_cardel'), validate = false, arguments = {
 
 ESX.RegisterCommand('setaccountmoney', 'admin', function(xPlayer, args, showError)
 	if args.playerId.getAccount(args.account) then
-		args.playerId.setAccountMoney(args.account, args.amount)
+		args.playerId.setAccountMoney(args.account, args.amount, "Government Grant")
 	else
 		showError(_U('command_giveaccountmoney_invalid'))
 	end
@@ -52,7 +62,7 @@ end, true, {help = _U('command_setaccountmoney'), validate = true, arguments = {
 
 ESX.RegisterCommand('giveaccountmoney', 'admin', function(xPlayer, args, showError)
 	if args.playerId.getAccount(args.account) then
-		args.playerId.addAccountMoney(args.account, args.amount)
+		args.playerId.addAccountMoney(args.account, args.amount, "Government Grant")
 	else
 		showError(_U('command_giveaccountmoney_invalid'))
 	end
@@ -142,7 +152,7 @@ end
 
 ESX.RegisterCommand('setgroup', 'admin', function(xPlayer, args, showError)
 	if not args.playerId then args.playerId = xPlayer.source end
-	if args.group == "superadmin" then args.group = "admin" print("[^3WARNING^7] Superadmin detected, setting group to admin") end
+	if args.group == "superadmin" then args.group = "admin" print("[^3WARNING^7] ^5Superadmin^7 detected, setting group to ^5admin^7") end
 	args.playerId.setGroup(args.group)
 end, true, {help = _U('command_setgroup'), validate = true, arguments = {
 	{name = 'playerId', help = _U('commandgeneric_playerid'), type = 'player'},
@@ -151,7 +161,7 @@ end, true, {help = _U('command_setgroup'), validate = true, arguments = {
 
 ESX.RegisterCommand('save', 'admin', function(xPlayer, args, showError)
 	Core.SavePlayer(args.playerId)
-	print("[^2Info^0] Saved Player!")
+	print("[^2Info^0] Saved Player - ^5".. args.playerId.source .. "^0")
 end, true, {help = _U('command_save'), validate = true, arguments = {
 	{name = 'playerId', help = _U('commandgeneric_playerid'), type = 'player'}
 }})

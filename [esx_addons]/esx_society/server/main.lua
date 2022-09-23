@@ -63,7 +63,7 @@ AddEventHandler('esx_society:withdrawMoney', function(societyName, amount)
 	local source = source
 	local society = GetSociety(societyName)
 	if not society then
-		print(('[^3WARNING^7] %s attempted to withdraw from non-existing society %s!'):format(xPlayer.getName(), societyName))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to withdraw from non-existing society - ^5%s^7!'):format(source, societyName))
 		return
 	end
 	local xPlayer = ESX.GetPlayerFromId(source)
@@ -72,14 +72,14 @@ AddEventHandler('esx_society:withdrawMoney', function(societyName, amount)
 		TriggerEvent('esx_addonaccount:getSharedAccount', society.account, function(account)
 			if amount > 0 and account.money >= amount then
 				account.removeMoney(amount)
-				xPlayer.addMoney(amount)
+				xPlayer.addMoney(amount, "Society Withdraw")
 				xPlayer.showNotification(_U('have_withdrawn', ESX.Math.GroupDigits(amount)))
 			else
 				xPlayer.showNotification(_U('invalid_amount'))
 			end
 		end)
 	else
-		print(('esx_society: %s attempted to call withdrawMoney!'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to withdraw from society - ^5%s^7!'):format(source, society.name))
 	end
 end)
 
@@ -89,7 +89,7 @@ AddEventHandler('esx_society:depositMoney', function(societyName, amount)
 	local xPlayer = ESX.GetPlayerFromId(source)
 	local society = GetSociety(societyName)
 	if not society then
-		print(('[^3WARNING^7] %s attempted to deposit to non-existing society %s!'):format(xPlayer.getName(), societyName))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to deposit to non-existing society - ^5%s^7!'):format(source, societyName))
 		return
 	end
 	amount = ESX.Math.Round(tonumber(amount))
@@ -97,7 +97,7 @@ AddEventHandler('esx_society:depositMoney', function(societyName, amount)
 	if xPlayer.job.name == society.name then
 		if amount > 0 and xPlayer.getMoney() >= amount then
 			TriggerEvent('esx_addonaccount:getSharedAccount', society.account, function(account)
-				xPlayer.removeMoney(amount)
+				xPlayer.removeMoney(amount, "Society Deposit")
 				xPlayer.showNotification(_U('have_deposited', ESX.Math.GroupDigits(amount)))
 				account.addMoney(amount)
 			end)
@@ -105,7 +105,7 @@ AddEventHandler('esx_society:depositMoney', function(societyName, amount)
 			xPlayer.showNotification(_U('invalid_amount'))
 		end
 	else
-		print(('esx_society: %s attempted to call depositMoney!'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to deposit to society - ^5%s^7!'):format(source, society.name))
 	end
 end)
 
@@ -118,7 +118,7 @@ AddEventHandler('esx_society:washMoney', function(society, amount)
 
 	if xPlayer.job.name == society then
 		if amount and amount > 0 and account.money >= amount then
-			xPlayer.removeAccountMoney('black_money', amount)
+			xPlayer.removeAccountMoney('black_money', amount, "Washing")
 
 			MySQL.insert('INSERT INTO society_moneywash (identifier, society, amount) VALUES (?, ?, ?)', {xPlayer.identifier, society, amount},
 			function(rowsChanged)
@@ -128,7 +128,7 @@ AddEventHandler('esx_society:washMoney', function(society, amount)
 			xPlayer.showNotification(_U('invalid_amount'))
 		end
 	else
-		print(('esx_society: %s attempted to call washMoney!'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to wash money in society - ^5%s^7!'):format(source, society))
 	end
 end)
 
@@ -138,7 +138,7 @@ AddEventHandler('esx_society:putVehicleInGarage', function(societyName, vehicle)
 	local xPlayer = ESX.GetPlayerFromId(source)
 	local society = GetSociety(societyName)
 	if not society then
-		print(('[^3WARNING^7] %s attempted to put a vehicle in a non-existing society - %s!'):format(xPlayer.getName(), societyName))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to put vehicle in non-existing society garage - ^5%s^7!'):format(source, societyName))
 		return
 	end
 	TriggerEvent('esx_datastore:getSharedDataStore', society.datastore, function(store)
@@ -154,7 +154,7 @@ AddEventHandler('esx_society:removeVehicleFromGarage', function(societyName, veh
 	local xPlayer = ESX.GetPlayerFromId(source)
 	local society = GetSociety(societyName)
 	if not society then
-		print(('[^3WARNING^7] %s attempted to Remove a vehicle in a non-existing society - %s!'):format(xPlayer.getName(), societyName))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to remove vehicle from non-existing society garage - ^5%s^7!'):format(source, societyName))
 		return
 	end
 	TriggerEvent('esx_datastore:getSharedDataStore', society.datastore, function(store)
@@ -174,7 +174,7 @@ end)
 ESX.RegisterServerCallback('esx_society:getSocietyMoney', function(source, cb, societyName)
 	local society = GetSociety(societyName)
 	if not society then
-		print(('[^3WARNING^7] Attempting To get a non-existing society - %s!'):format(societyName))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to get money from non-existing society - ^5%s^7!'):format(source, societyName))
 		return
 	end
 	if society then
@@ -275,19 +275,22 @@ end)
 ESX.RegisterServerCallback('esx_society:setJob', function(source, cb, identifier, job, grade, type)
 	local xPlayer = ESX.GetPlayerFromId(source)
 	local isBoss = xPlayer.job.grade_name == 'boss'
+	local xTarget = ESX.GetPlayerFromIdentifier(identifier)
 
 	if isBoss then
-		local xTarget = ESX.GetPlayerFromIdentifier(identifier)
 
 		if xTarget then
 			xTarget.setJob(job, grade)
 
 			if type == 'hire' then
 				xTarget.showNotification(_U('you_have_been_hired', job))
+				xPlayer.showNotification(_U("you_have_hired", xTarget.getName()))
 			elseif type == 'promote' then
 				xTarget.showNotification(_U('you_have_been_promoted'))
+				xPlayer.showNotification(_U("you_have_promoted", xTarget.getName()))
 			elseif type == 'fire' then
 				xTarget.showNotification(_U('you_have_been_fired', xTarget.getJob().label))
+				xPlayer.showNotification(_U("you_have_fired", xTarget.getName()))
 			end
 
 			cb()
@@ -298,10 +301,11 @@ ESX.RegisterServerCallback('esx_society:setJob', function(source, cb, identifier
 			end)
 		end
 	else
-		print(('esx_society: %s attempted to setJob'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to setJob for Player ^5%s^7!'):format(source, xTarget.source))
 		cb()
 	end
 end)
+
 
 ESX.RegisterServerCallback('esx_society:setJobSalary', function(source, cb, job, grade, salary)
 	local xPlayer = ESX.GetPlayerFromId(source)
@@ -323,11 +327,11 @@ ESX.RegisterServerCallback('esx_society:setJobSalary', function(source, cb, job,
 				cb()
 			end)
 		else
-			print(('esx_society: %s attempted to setJobSalary over config limit!'):format(xPlayer.identifier))
+			print(('[^3WARNING^7] Player ^5%s^7 attempted to setJobSalary over the config limit for ^5%s^7!'):format(source, job))
 			cb()
 		end
 	else
-		print(('esx_society: %s attempted to setJobSalary'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to setJobSalary for ^5%s^7!'):format(source, job))
 		cb()
 	end
 end)
@@ -352,7 +356,7 @@ ESX.RegisterServerCallback('esx_society:setJobLabel', function(source, cb, job, 
 				cb()
 			end)
 	else
-		print(('esx_society: %s attempted to setJobSalary'):format(xPlayer.identifier))
+		print(('[^3WARNING^7] Player ^5%s^7 attempted to setJobLabel for ^5%s^7!'):format(source, job))
 		cb()
 	end
 end)
