@@ -180,6 +180,9 @@ Locales['de'] = {
   ['gadget_parachute'] = 'Fallschirm',
   ['weapon_flare'] = 'Leuchtpistole',
   ['weapon_doubleaction'] = 'double-Action Revolver',
+  ['weapon_metaldetector'] = 'Metal Detektor',
+  ['weapon_precisionrifle'] = 'Präzisions Rifle',
+  ['weapon_tactilerifle'] = 'Dienstgewehr',
 
   -- Weapon Components
   ['component_clip_default'] = 'standart Griff',
